@@ -8,12 +8,12 @@ RUN go build -o vless-manager .
 
 FROM alpine:3.18
 
-RUN apk add --no-cache \
+# Сначала обновляем индекс пакетов, затем устанавливаем
+RUN apk update && apk add --no-cache \
     xray \
     openssl \
     curl \
-    sudo \
-    openrc
+    sudo
 
 RUN adduser -D -u 1000 vlessuser
 
@@ -25,7 +25,7 @@ RUN mkdir -p /etc/xray /var/log/xray \
     && chown -R vlessuser:vlessuser /etc/xray /var/log/xray \
     && chmod +x /usr/local/bin/init-xray.sh /usr/local/bin/vless-manager
 
-RUN echo "vlessuser ALL=(root) NOPASSWD: /sbin/rc-service xray reload" >> /etc/sudoers
+RUN echo "vlessuser ALL=(root) NOPASSWD: /usr/bin/rc-service xray reload" >> /etc/sudoers
 
 EXPOSE 8080 443
 
