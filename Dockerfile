@@ -1,4 +1,4 @@
-FROM golang:1.21-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 COPY go.mod go.sum ./
@@ -12,7 +12,8 @@ RUN apk add --no-cache \
     xray \
     openssl \
     curl \
-    sudo
+    sudo \
+    openrc
 
 RUN adduser -D -u 1000 vlessuser
 
@@ -21,9 +22,10 @@ COPY --from=builder /app/config.yaml /etc/vless-manager/
 COPY scripts/init-xray.sh /usr/local/bin/
 
 RUN mkdir -p /etc/xray /var/log/xray \
-    && chown -R vlessuser:vlessuser /etc/xray /var/log/xray
+    && chown -R vlessuser:vlessuser /etc/xray /var/log/xray \
+    && chmod +x /usr/local/bin/init-xray.sh /usr/local/bin/vless-manager
 
-RUN echo "vlessuser ALL=(root) NOPASSWD: /usr/bin/systemctl reload xray" >> /etc/sudoers
+RUN echo "vlessuser ALL=(root) NOPASSWD: /sbin/rc-service xray reload" >> /etc/sudoers
 
 EXPOSE 8080 443
 
