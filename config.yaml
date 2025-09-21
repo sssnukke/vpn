@@ -1,0 +1,3 @@
+xray_config_path: "/etc/xray/config.json"
+server_ip: "72.56.66.37"
+server_port: 443
