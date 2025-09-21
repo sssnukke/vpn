@@ -8,12 +8,29 @@ RUN go build -o vless-manager .
 
 FROM alpine:3.18
 
-# Сначала обновляем индекс пакетов, затем устанавливаем
+# Определяем архитектуру и устанавливаем соответствующий Xray
+ARG TARGETARCH
 RUN apk update && apk add --no-cache \
-    xray \
-    openssl \
     curl \
-    sudo
+    openssl \
+    sudo \
+    unzip
+
+# Устанавливаем Xray для правильной архитектуры
+RUN case "${TARGETARCH}" in \
+    "amd64") \
+        XRAY_ARCH="64" ;; \
+    "arm64") \
+        XRAY_ARCH="arm64-v8a" ;; \
+    "arm") \
+        XRAY_ARCH="arm32-v7a" ;; \
+    *) \
+        echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    curl -L "https://github.com/XTLS/Xray-core/releases/download/v1.8.11/Xray-linux-${XRAY_ARCH}.zip" -o xray.zip && \
+    unzip xray.zip xray -d /usr/local/bin/ && \
+    rm xray.zip && \
+    chmod +x /usr/local/bin/xray
 
 RUN adduser -D -u 1000 vlessuser
 
