@@ -1,54 +1,16 @@
-FROM golang:1.20 AS builder
+FROM alpine:latest
 
-# Установите git
-RUN apk update && apk add --no-cache git
+# Установите необходимые пакеты
+RUN apk add --no-cache curl bash
 
-WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
-COPY . .
-RUN go build -o vless-manager .
+# Установите XRay
+RUN curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh | bash
 
-FROM alpine:3.18
+# Копируем конфигурационный файл
+COPY config.json /usr/local/etc/xray/config.json
 
-# Используйте альтернативное зеркало
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirror.example.com/g' /etc/apk/repositories
+# Открываем порты
+EXPOSE 443 42639
 
-RUN apk update && apk add --no-cache \
-    curl \
-    openssl \
-    sudo \
-    unzip
-
-# Устанавливаем Xray вручную
-RUN ARCH=$(uname -m) && \
-    case "${ARCH}" in \
-    "x86_64") \
-        XRAY_ARCH="64" ;; \
-    "aarch64") \
-        XRAY_ARCH="arm64-v8a" ;; \
-    "armv7l") \
-        XRAY_ARCH="arm32-v7a" ;; \
-    *) \
-        echo "Unsupported architecture: ${ARCH}" && exit 1 ;; \
-    esac && \
-    curl -L "https://github.com/XTLS/Xray-core/releases/download/v1.8.11/Xray-linux-${XRAY_ARCH}.zip" -o xray.zip && \
-    unzip xray.zip xray -d /usr/local/bin/ && \
-    rm xray.zip && \
-    chmod +x /usr/local/bin/xray
-
-RUN adduser -D -u 1000 vlessuser
-
-COPY --from=builder /app/vless-manager /usr/local/bin/
-COPY --from=builder /app/config.yaml /etc/vless-manager/
-COPY scripts/init-xray.sh /usr/local/bin/
-
-RUN mkdir -p /etc/xray /var/log/xray \
-    && chown -R vlessuser:vlessuser /etc/xray /var/log/xray \
-    && chmod +x /usr/local/bin/init-xray.sh /usr/local/bin/vless-manager
-
-RUN echo "vlessuser ALL=(root) NOPASSWD: /usr/bin/rc-service xray reload" >> /etc/sudoers
-
-EXPOSE 8080 443
-
-CMD ["sh", "-c", "/usr/local/bin/init-xray.sh && /usr/local/bin/vless-manager"]
+# Запускаем XRay
+CMD ["/usr/local/bin/xray", "run", "-c", "/usr/local/etc/xray/config.json"]
