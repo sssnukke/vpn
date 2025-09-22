@@ -9,8 +9,10 @@ RUN go mod download
 COPY . .
 RUN go build -o vless-manager .
 
-
 FROM alpine:3.18
+
+# Используйте альтернативное зеркало
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirror.example.com/g' /etc/apk/repositories
 
 RUN apk update && apk add --no-cache \
     curl \
