@@ -1,11 +1,12 @@
 FROM golang:1.24-alpine AS builder
 
-# Для европейских серверов используйте официальный proxy
+# Отключаем IPv6 для Go модулей
 ENV GOPROXY=https://proxy.golang.org,direct
 ENV GOSUMDB=sum.golang.org
+ENV GODEBUG=netdns=go    # Используем pure Go DNS resolver
 
-# Или отключите проверку сумм если есть проблемы с сетью
-# ENV GOSUMDB=off
+# Принудительно используем IPv4
+RUN echo 'precedence ::ffff:0:0/96  100' >> /etc/gai.conf
 
 WORKDIR /app
 COPY go.mod go.sum ./
