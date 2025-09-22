@@ -1,4 +1,11 @@
-FROM golang:1.24.2-alpine AS builder
+FROM golang:1.24-alpine AS builder
+
+# Для европейских серверов используйте официальный proxy
+ENV GOPROXY=https://proxy.golang.org,direct
+ENV GOSUMDB=sum.golang.org
+
+# Или отключите проверку сумм если есть проблемы с сетью
+# ENV GOSUMDB=off
 
 WORKDIR /app
 COPY go.mod go.sum ./
@@ -8,25 +15,23 @@ RUN go build -o vless-manager .
 
 FROM alpine:3.18
 
-# Меняем mirror на Cloudflare (надёжный вариант)
-RUN sed -i 's|dl-cdn.alpinelinux.org|dl-cdn.alpinelinux.org|g' /etc/apk/repositories \
-    && echo "https://mirror.clarkson.edu/alpine/v3.18/main" >> /etc/apk/repositories \
-    && echo "https://mirror.clarkson.edu/alpine/v3.18/community" >> /etc/apk/repositories
-
-# Устанавливаем пакеты
-RUN apk add --no-cache \
+RUN apk update && apk add --no-cache \
     curl \
     openssl \
     sudo \
     unzip
 
-# Определяем архитектуру и устанавливаем Xray
-ARG TARGETARCH
-RUN case "${TARGETARCH}" in \
-    "amd64")   XRAY_ARCH="64" ;; \
-    "arm64")   XRAY_ARCH="arm64-v8a" ;; \
-    "arm")     XRAY_ARCH="arm32-v7a" ;; \
-    *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
+# Устанавливаем Xray вручную
+RUN ARCH=$(uname -m) && \
+    case "${ARCH}" in \
+    "x86_64") \
+        XRAY_ARCH="64" ;; \
+    "aarch64") \
+        XRAY_ARCH="arm64-v8a" ;; \
+    "armv7l") \
+        XRAY_ARCH="arm32-v7a" ;; \
+    *) \
+        echo "Unsupported architecture: ${ARCH}" && exit 1 ;; \
     esac && \
     curl -L "https://github.com/XTLS/Xray-core/releases/download/v1.8.11/Xray-linux-${XRAY_ARCH}.zip" -o xray.zip && \
     unzip xray.zip xray -d /usr/local/bin/ && \
