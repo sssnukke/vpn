@@ -1,12 +1,8 @@
 FROM golang:1.24-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
-# Отключаем IPv6 для Go модулей
-ENV GOPROXY=https://proxy.golang.org,direct
-ENV GOSUMDB=sum.golang.org
-ENV GODEBUG=netdns=go    # Используем pure Go DNS resolver
-
-# Принудительно используем IPv4
-RUN echo 'precedence ::ffff:0:0/96  100' >> /etc/gai.conf
+ENV GOPROXY=direct
+ENV GOSUMDB=off
 
 WORKDIR /app
 COPY go.mod go.sum ./
