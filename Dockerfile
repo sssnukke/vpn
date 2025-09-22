@@ -1,13 +1,14 @@
-FROM golang:1.24-alpine AS builder
+FROM golang:1.20 AS builder
 
-ENV GOPROXY=direct
-ENV GOSUMDB=off
+# Установите git
+RUN apk update && apk add --no-cache git
 
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 RUN go build -o vless-manager .
+
 
 FROM alpine:3.18
 
